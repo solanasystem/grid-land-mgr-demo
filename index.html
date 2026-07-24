@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<!-- BUILD: grid-land-mgr-demo v20260724D / 公開デモ版・架空データのみ・本番DB非接続 / ダークUI+衛星写真風ベース / iframe埋め込み対応 -->
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GRID LAND MGR ｜ 用地取得のための地理情報システム</title>
+<meta name="description" content="発電・蓄電所用地の調査から取得判断までを一枚の地図に統合する業務システム。デモ画面（表示データはすべて架空）。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Noto+Sans+JP:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sumi:#171C22;
+  --sumi-2:#3A4450;
+  --sumi-3:#6B7684;
+  --washi:#F1F3EF;
+  --kami:#FBFCFA;
+  --kasumi:#DDE1DA;
+  --ai:#1E4A6D;
+  --ai-light:#E4EBF1;
+  --moss:#5F8250;
+  --shu:#B0402C;
+  --ki:#C08A2E;
+  --shadow:0 1px 2px rgba(23,28,34,.06),0 8px 24px rgba(23,28,34,.07);
+  --app-bg:#111820;
+  --app-panel:#17212C;
+  --app-panel2:#1E2A37;
+  --app-line:#2C3B4A;
+  --app-txt:#C4D0DC;
+  --app-txt2:#7E8D9C;
+  --app-accent:#F2B233;
+  --app-blue:#4C8DBF;
+  --mincho:'Shippori Mincho B1',serif;
+  --gothic:'Noto Sans JP',system-ui,sans-serif;
+  --mono:'Roboto Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  font-family:var(--gothic);
+  color:var(--sumi);
+  background-color:var(--washi);
+  background-image:
+    linear-gradient(rgba(30,74,109,.055) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(30,74,109,.055) 1px,transparent 1px),
+    linear-gradient(rgba(30,74,109,.11) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(30,74,109,.11) 1px,transparent 1px);
+  background-size:9px 9px,9px 9px,45px 45px,45px 45px;
+  line-height:1.75;
+  font-size:15px;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+a{color:var(--ai)}
+
+/* ---- 帯（台帳の見出し罫） ---- */
+.ledger-rule{
+  display:flex;align-items:center;gap:14px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.18em;
+  color:var(--sumi-3);text-transform:uppercase;
+}
+.ledger-rule::after{content:"";flex:1;height:1px;background:var(--kasumi)}
+
+/* ---- ヘッダ ---- */
+header.top{
+  position:sticky;top:0;z-index:60;
+  background:rgba(241,243,239,.88);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--kasumi);
+}
+.top-in{display:flex;align-items:center;gap:16px;height:60px}
+.logo{font-family:var(--mincho);font-weight:800;font-size:19px;letter-spacing:.04em;white-space:nowrap}
+.logo span{color:var(--ai)}
+.top-tag{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;color:var(--shu);
+  border:1px solid rgba(176,64,44,.35);border-radius:2px;padding:2px 7px;white-space:nowrap;
+}
+.top-spacer{flex:1}
+.top-note{font-size:12px;color:var(--sumi-3)}
+
+/* ---- ヒーロー ---- */
+.hero{padding:64px 24px 12px}
+.eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.22em;color:var(--ai);margin-bottom:20px;
+}
+h1{
+  font-family:var(--mincho);font-weight:800;
+  font-size:clamp(30px,5.2vw,52px);line-height:1.32;letter-spacing:.01em;
+  margin:0 0 22px;max-width:19em;position:relative;z-index:0;
+}
+h1 em{font-style:normal;color:var(--ai);position:relative;white-space:nowrap}
+h1 em::after{
+  content:"";position:absolute;left:0;right:0;bottom:.08em;height:.34em;
+  background:rgba(192,138,46,.26);z-index:-1;
+}
+.lede{font-size:16.5px;max-width:36em;color:var(--sumi-2);margin:0 0 34px}
+.hero-meta{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--kasumi);margin-bottom:40px}
+.hero-meta div{
+  padding:14px 26px 14px 0;margin-right:26px;border-right:1px solid var(--kasumi);
+}
+.hero-meta div:last-child{border-right:0}
+.hero-meta .mk{display:block;font-size:11.5px;color:var(--sumi-3);letter-spacing:.06em;margin:0 0 3px}
+.hero-meta .mv{display:block;margin:0;font-family:var(--mono);font-size:19px;font-weight:500;color:var(--ai)}
+
+/* ---- 図面パネル共通 ---- */
+.plate{
+  background:var(--kami);
+  border:1px solid var(--kasumi);
+  border-radius:3px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.plate-head{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:11px 16px;border-bottom:1px solid var(--kasumi);
+  background:linear-gradient(180deg,#fff,#F6F8F4);
+}
+.plate-title{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;color:var(--sumi-2)}
+.plate-title b{color:var(--ai);font-weight:500}
+.plate-head .sp{flex:1}
+.stamp{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+  color:var(--shu);border:1px solid rgba(176,64,44,.4);
+  padding:1px 6px;border-radius:2px;transform:rotate(-1.5deg);
+}
+
+/* ---- ブラウザ枠 ---- */
+.browser{border:1px solid #0A0F15;border-radius:6px;overflow:hidden;
+  box-shadow:0 3px 8px rgba(10,15,21,.20),0 26px 58px rgba(10,15,21,.34);background:var(--app-bg)}
+.chrome{display:flex;align-items:center;gap:7px;padding:9px 13px;background:#0B1119;border-bottom:1px solid #05090D}
+.cdot{width:10px;height:10px;border-radius:50%;flex:none;opacity:.88}
+.url{flex:1;margin-left:8px;background:#18222D;border:1px solid #2C3B4A;border-radius:3px;padding:3px 10px;
+  font-family:var(--mono);font-size:10.5px;color:#8496A6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fit{position:relative;overflow:hidden;background:var(--app-bg)}
+.shell{width:1060px;height:626px;transform-origin:top left;display:flex;flex-direction:column;
+  font-size:12px;background:var(--app-bg);color:var(--app-txt)}
+
+/* ---- アプリ上部 ---- */
+.appbar{display:flex;align-items:center;gap:15px;height:40px;padding:0 13px;
+  background:#0D131A;color:#DCE5ED;flex:none;border-bottom:1px solid #05090D}
+.app-logo{font-family:var(--mincho);font-weight:600;font-size:13px;letter-spacing:.06em;white-space:nowrap}
+.app-logo b{color:var(--app-accent);font-weight:600}
+.vtag{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:#6F8092;
+  border:1px solid #2C3B4A;border-radius:2px;padding:1px 5px}
+.tabs{display:flex;gap:2px}
+.tab{font-family:var(--gothic);font-size:12px;color:#8C9BAA;background:transparent;border:0;
+  padding:5px 15px;border-radius:3px;cursor:pointer}
+.tab:hover{color:#fff;background:rgba(255,255,255,.07)}
+.tab.act{background:var(--app-panel2);color:#EAF1F7;box-shadow:inset 0 -2px 0 var(--app-accent)}
+.tab:focus-visible{outline:2px solid var(--app-accent);outline-offset:-2px}
+.appbar .sp{flex:1}
+.who{display:flex;align-items:center;gap:7px;font-size:11.5px;color:#9FAEBC;white-space:nowrap}
+.av{width:21px;height:21px;border-radius:50%;background:#2F5A7C;color:#DCE9F3;display:grid;place-items:center;font-size:11px}
+
+/* ---- ツールバー ---- */
+.toolbar{display:flex;align-items:center;gap:7px;height:36px;padding:0 11px;flex:none;
+  background:var(--app-panel);border-bottom:1px solid var(--app-line)}
+.srch{width:250px;background:#101922;border:1px solid var(--app-line);border-radius:3px;
+  padding:4px 10px;color:#6F8092;font-size:11.5px}
+.tb-btn{font-family:var(--gothic);font-size:11px;color:var(--app-txt);background:var(--app-panel2);
+  border:1px solid var(--app-line);border-radius:3px;padding:4px 11px;white-space:nowrap}
+.tb-btn.gold{background:rgba(242,178,51,.14);border-color:rgba(242,178,51,.5);color:var(--app-accent)}
+.toolbar .sp{flex:1}
+.tb-stat{font-family:var(--mono);font-size:10px;color:var(--app-txt2);display:flex;align-items:center;gap:6px}
+.tb-stat i{width:6px;height:6px;border-radius:50%;background:#5F8250;display:inline-block;font-style:normal}
+
+/* ---- 3カラム ---- */
+.cols{flex:1;display:flex;min-height:0}
+.nav{width:178px;flex:none;background:var(--app-panel);border-right:1px solid var(--app-line);
+  overflow:auto;padding-bottom:8px;transition:width .22s ease}
+.nav::-webkit-scrollbar{width:7px}.nav::-webkit-scrollbar-thumb{background:#2C3B4A;border-radius:4px}
+.nav-lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--app-txt2);
+  padding:11px 12px 6px;display:flex;align-items:center;gap:6px}
+.cnt{margin-left:auto;color:var(--app-blue)}
+.nav-i{padding:6px 12px;font-size:12.5px;color:#A5B4C2;cursor:default;border-left:2px solid transparent;white-space:nowrap}
+.nav-i:hover{background:#1E2A37}
+.nav-i.act{background:var(--app-panel2);border-left-color:var(--app-accent);color:#EAF1F7;font-weight:500}
+.lyrs{padding:0 10px}
+.layer{opacity:0;transition:opacity .45s ease;pointer-events:none}
+.layer.on{opacity:1}
+.lyr{display:flex;align-items:center;gap:7px;padding:3.5px 2px;cursor:pointer;font-size:11.5px;
+  user-select:none;line-height:1.4;color:#A5B4C2;white-space:nowrap}
+.lyr:hover{color:#E3EBF2}
+.lyr input{appearance:none;width:13px;height:13px;flex:none;border:1.3px solid #55677A;border-radius:2px;
+  background:#101922;position:relative;cursor:pointer}
+.lyr input:checked{background:var(--app-blue);border-color:var(--app-blue)}
+.lyr input:checked::after{content:"";position:absolute;left:3.8px;top:1.1px;width:3px;height:6.4px;
+  border:solid #fff;border-width:0 1.6px 1.6px 0;transform:rotate(42deg)}
+.lyr input:focus-visible{outline:2px solid var(--app-accent);outline-offset:1px}
+.swatch{width:9px;height:9px;flex:none;border-radius:1px;border:1px solid rgba(255,255,255,.22)}
+.lyr .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.main{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;background:#131C16}
+.pane{position:absolute;inset:0;display:flex;flex-direction:column}
+.pane[hidden]{display:none}
+#pane-map svg{display:block;width:100%;height:100%}
+
+/* 地図の上に重なる操作系 */
+.mapctl{position:absolute;right:11px;bottom:34px;display:flex;flex-direction:column;
+  border:1px solid #05090D;border-radius:3px;overflow:hidden;box-shadow:0 2px 7px rgba(0,0,0,.4)}
+.mapctl span{width:26px;height:26px;display:grid;place-items:center;background:#1E2A37;
+  color:#C4D0DC;font-size:15px;line-height:1;border-bottom:1px solid #05090D}
+.mapctl span:last-child{border-bottom:0}
+.mapctl .z{font-family:var(--mono);font-size:10.5px;background:#17212C;color:#8496A6}
+.scalebar{position:absolute;left:11px;bottom:34px;font-family:var(--mono);font-size:9.5px;color:#D5DEE6;
+  background:rgba(11,17,25,.72);padding:2px 7px;border:1px solid #2C3B4A;display:flex;align-items:center;gap:6px}
+.scalebar span{width:48px;height:5px;border:1px solid #D5DEE6;border-top:0}
+.attrib{position:absolute;left:0;right:0;bottom:0;height:20px;display:flex;align-items:center;
+  gap:5px;padding:0 8px;background:rgba(11,17,25,.78);border-top:1px solid rgba(44,59,74,.8);
+  font-size:9.5px;color:#7E8D9C;white-space:nowrap;overflow:hidden}
+.attrib b{color:#4C8DBF;font-weight:400}
+
+.parcel{fill:rgba(255,255,255,.02);stroke:#9DB3C6;stroke-width:.7;cursor:pointer;transition:fill .15s}
+.parcel:hover{fill:rgba(76,141,191,.28)}
+.parcel.sel{fill:rgba(242,178,51,.26);stroke:var(--app-accent);stroke-width:1.8}
+.noline .parcel{stroke-opacity:0}
+.noline .parcel.sel{stroke-opacity:1}
+.road{fill:rgba(214,224,232,.16);stroke:rgba(214,224,232,.30);stroke-width:.8}
+.chiban{font-family:var(--mono);font-size:7px;fill:#E2EAF1;pointer-events:none;user-select:none;
+  paint-order:stroke;stroke:rgba(8,14,20,.85);stroke-width:2.1px;stroke-linejoin:round}
+.zone-a{fill:rgba(206,96,74,.24)}
+.zone-b{fill:rgba(126,176,104,.22)}
+.zone-c{fill:rgba(150,166,184,.16)}
+.hz-flood{fill:rgba(78,146,200,.26);stroke:rgba(120,180,225,.72);stroke-width:.9;stroke-dasharray:4 2}
+.hz-naisui{fill:rgba(86,178,196,.24);stroke:rgba(120,205,220,.72);stroke-width:.9;stroke-dasharray:2 2}
+.hz-slide{fill:rgba(226,164,60,.28);stroke:rgba(242,190,90,.8);stroke-width:.9;stroke-dasharray:4 2}
+.grid-ring{fill:none;stroke:#79B4E4;stroke-width:1;stroke-dasharray:3 3;opacity:.6}
+.cand-blob{filter:url(#soft);fill:rgba(126,200,120,.34)}
+
+/* ---- 右パネル ---- */
+.props{width:262px;flex:none;border-left:1px solid var(--app-line);background:var(--app-panel);overflow:auto}
+.props::-webkit-scrollbar{width:7px}.props::-webkit-scrollbar-thumb{background:#2C3B4A;border-radius:4px}
+.props-h{padding:9px 13px;border-bottom:1px solid var(--app-line);background:var(--app-panel2);position:sticky;top:0}
+.verdict-chiban{font-family:var(--mono);font-size:19px;font-weight:500;color:#EAF1F7}
+.verdict-sub{font-size:10.5px;color:var(--app-txt2)}
+.badge{display:inline-flex;align-items:center;gap:6px;font-family:var(--mincho);font-weight:600;
+  font-size:13px;padding:5px 11px;border-radius:2px;margin:10px 13px}
+.badge.ok{background:rgba(126,176,104,.16);color:#A8D191;border:1px solid rgba(126,176,104,.5)}
+.badge.hold{background:rgba(226,164,60,.15);color:#EFC275;border:1px solid rgba(226,164,60,.5)}
+.badge.ng{background:rgba(206,96,74,.15);color:#E29282;border:1px solid rgba(206,96,74,.48)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.shell .side-lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--app-txt2)}
+.grp{padding:9px 13px 3px}
+.chk{list-style:none;margin:0;padding:0 13px 10px;font-size:11.5px;color:#B6C4D1}
+.chk li{display:flex;gap:8px;padding:4px 0;border-bottom:1px dotted var(--app-line);align-items:baseline}
+.chk .k{color:var(--app-txt2);flex:none;width:6.4em}
+.chk .v{font-family:var(--mono);font-size:11px;text-align:right;flex:1}
+.v.g{color:#8FC076}.v.y{color:#E8B45E}.v.r{color:#E08872}
+.props-empty{padding:22px 14px;font-size:12px;color:var(--app-txt2);line-height:1.9}
+
+/* ---- 一覧 ---- */
+.tbar{display:flex;align-items:center;gap:6px;padding:7px 11px;background:var(--app-panel);
+  border-bottom:1px solid var(--app-line);flex:none}
+.fchip{font-size:11px;border:1px solid var(--app-line);border-radius:11px;padding:2px 11px;
+  color:#A5B4C2;background:var(--app-panel2)}
+.fchip.act{background:var(--app-blue);color:#0D131A;border-color:var(--app-blue)}
+.tbar .sp{flex:1}
+.tnote{font-family:var(--mono);font-size:10.5px;color:var(--app-txt2)}
+.tscroll{flex:1;overflow:auto;background:var(--app-bg)}
+.tscroll::-webkit-scrollbar{width:9px;height:9px}.tscroll::-webkit-scrollbar-thumb{background:#2C3B4A;border-radius:4px}
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px;color:#B6C4D1}
+.tbl th{position:sticky;top:0;background:var(--app-panel2);text-align:left;font-weight:500;color:#93A3B2;
+  padding:6px 9px;border-bottom:1px solid var(--app-line);white-space:nowrap;font-size:10.5px}
+.tbl td{padding:5px 9px;border-bottom:1px solid #1C2733;white-space:nowrap}
+.tbl tr:hover td{background:#18222D}
+.tbl .n{text-align:right;font-family:var(--mono)}
+.tbl .mono{font-family:var(--mono)}
+.pill{font-size:10px;padding:1px 7px;border-radius:9px;border:1px solid}
+.pill.ok{color:#A8D191;border-color:rgba(126,176,104,.55);background:rgba(126,176,104,.12)}
+.pill.hold{color:#EFC275;border-color:rgba(226,164,60,.55);background:rgba(226,164,60,.12)}
+.pill.ng{color:#E29282;border-color:rgba(206,96,74,.5);background:rgba(206,96,74,.1)}
+.shell .mut{color:#6F8092}
+
+/* ---- 集計 ---- */
+#pane-sum{padding:16px;gap:14px;overflow:auto;background:var(--app-bg)}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.card{background:var(--app-panel);border:1px solid var(--app-line);border-radius:3px;padding:11px 13px}
+.card .cl{font-size:10.5px;color:var(--app-txt2)}
+.card .cv{font-family:var(--mono);font-size:22px;color:#8CC0EC;line-height:1.4}
+.card .cs{font-size:10px;color:var(--app-txt2)}
+.bars{background:var(--app-panel);border:1px solid var(--app-line);border-radius:3px;padding:13px}
+.bar{display:flex;align-items:center;gap:9px;margin-top:9px;font-size:11.5px}
+.bar .bl{width:5em;color:#A5B4C2}
+.bar .bt{flex:1;height:13px;background:#101922;border-radius:2px;overflow:hidden}
+.bar .bf{height:100%}
+.bar .bn{font-family:var(--mono);font-size:11px;width:4em;text-align:right;color:#A5B4C2}
+
+/* ---- ステータスバー ---- */
+.statusbar{height:26px;flex:none;display:flex;align-items:center;gap:18px;padding:0 13px;
+  background:#0D131A;border-top:1px solid #05090D;font-family:var(--mono);font-size:10px;color:#8496A6}
+.statusbar .sp{flex:1}
+.sync{color:#7FB069}
+
+/* ---- セクション ---- */
+.cap{font-size:12px;color:var(--sumi-3);margin:12px 0 0;max-width:52em}
+.note-narrow{display:none}
+@media(max-width:700px){.note-narrow{display:block;color:var(--ai)}}
+.sec{padding:78px 24px 0}
+.sec h2{
+  font-family:var(--mincho);font-weight:800;
+  font-size:clamp(23px,3.4vw,34px);line-height:1.45;margin:18px 0 16px;letter-spacing:.01em;
+}
+.btn{
+  font-family:var(--gothic);font-size:13px;font-weight:500;
+  background:var(--ai);color:#fff;border:0;border-radius:2px;
+  padding:8px 18px;cursor:pointer;transition:.15s;
+}
+.btn:hover{background:#173B57}
+.btn:disabled{background:var(--sumi-3);cursor:default}
+.btn:focus-visible{outline:2px solid var(--ki);outline-offset:2px}
+.btn.big{display:inline-block;padding:14px 30px;font-size:14.5px;text-decoration:none;margin-top:8px}
+.closing{padding-bottom:90px}
+
+/* ---- 登記簿 ---- */
+.two{display:grid;grid-template-columns:1fr 340px}
+.doc{
+  padding:26px 28px;background:#FCFCF8;
+  background-image:linear-gradient(90deg,rgba(23,28,34,.028) 1px,transparent 1px);
+  background-size:26px 100%;
+  border-right:1px solid var(--kasumi);font-size:13px;
+}
+.doc-ttl{font-family:var(--mincho);font-weight:600;font-size:17px;text-align:center;letter-spacing:.3em;margin-bottom:20px}
+.doc-sec{
+  font-family:var(--mincho);font-size:12.5px;letter-spacing:.2em;
+  background:var(--sumi);color:#fff;display:inline-block;padding:2px 12px;margin:14px 0 8px;
+}
+.doc-t{width:100%;border-collapse:collapse;font-size:13px}
+.doc-t th,.doc-t td{border:1px solid #C9CFC4;padding:8px 11px;text-align:left;vertical-align:top;font-weight:400}
+.doc-t th{width:6.6em;background:#F2F4EC;letter-spacing:.28em;color:var(--sumi-2);white-space:nowrap}
+.doc-t td[data-f]{transition:background .3s}
+.doc-t td.lit{background:rgba(192,138,46,.28)}
+.doc-foot{margin-top:18px;font-size:11px;color:var(--sumi-3);border-top:1px solid var(--kasumi);padding-top:10px}
+.extract{padding:20px 20px;background:var(--kami)}
+.rows{list-style:none;margin:12px 0 0;padding:0}
+.rows li{display:flex;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px dotted var(--kasumi)}
+.rows .k{font-size:11.5px;color:var(--sumi-3);width:5.6em;flex:none}
+.rows .v{font-family:var(--mono);font-size:12.5px;color:var(--sumi-3);line-height:1.6}
+.rows li.done .v{color:var(--sumi)}
+.rows li.done{animation:fill .35s ease}
+@keyframes fill{from{background:rgba(192,138,46,.22)}to{background:transparent}}
+.conf{margin-top:16px;font-size:12px;color:var(--sumi-3);min-height:2.6em}
+.conf b{font-family:var(--mono);color:var(--moss);font-weight:500}
+
+/* ---- CAD 比較 ---- */
+.cadwrap{position:relative;background:#FCFCF8;overflow:hidden}
+.cad-svg{display:block;width:100%;height:auto}
+.cad-clip{position:absolute;inset:0;background:#F7FAFC;overflow:hidden}
+.cad-handle{position:absolute;top:0;bottom:0;width:2px;background:var(--ai);pointer-events:none}
+.cad-handle span{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:34px;height:34px;border-radius:50%;background:var(--ai);
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+.cad-handle span::before,.cad-handle span::after{
+  content:"";position:absolute;top:50%;width:0;height:0;
+  border-top:5px solid transparent;border-bottom:5px solid transparent;
+}
+.cad-handle span::before{left:7px;margin-top:-5px;border-right:6px solid #fff}
+.cad-handle span::after{right:7px;margin-top:-5px;border-left:6px solid #fff}
+.cad-tag{
+  position:absolute;bottom:12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+  background:rgba(255,255,255,.85);border:1px solid var(--kasumi);padding:3px 9px;border-radius:2px;
+}
+.cad-tag.l{left:14px}
+.cad-tag.r{right:14px;color:var(--ai);border-color:rgba(30,74,109,.4)}
+#cadrange{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:ew-resize;margin:0}
+#cadrange:focus-visible{outline:2px solid var(--ki);outline-offset:-4px;opacity:.001}
+.rough{fill:none;stroke:#5B6154;stroke-width:1.5;stroke-linecap:round;opacity:.75}
+.rough2{fill:none;stroke:#7C8377;stroke-width:1.1;stroke-linecap:round;opacity:.5}
+.clean{fill:none;stroke:var(--ai);stroke-width:1.7;stroke-linejoin:round}
+.vtx{fill:#fff;stroke:var(--shu);stroke-width:1.3}
+.hand{font-family:var(--mincho);font-size:12px;fill:#6E7468}
+.cadnum{font-family:var(--mono);font-size:10px;fill:var(--ai)}
+
+/* ---- 現地調査 ---- */
+.phone-row{display:grid;grid-template-columns:300px 1fr;gap:56px;align-items:center;margin-top:12px}
+.phone{
+  width:300px;border-radius:38px;background:var(--sumi);padding:11px;
+  box-shadow:0 20px 44px rgba(23,28,34,.24);
+}
+.phone-scr{background:var(--kami);border-radius:28px;overflow:hidden;height:592px;display:flex;flex-direction:column}
+.ph-top{
+  background:var(--ai);color:#fff;padding:15px 16px 12px;font-size:13.5px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.ph-cnt{font-family:var(--mono);font-size:12px;opacity:.9}
+.ph-map{height:186px;background:#F2F5EE;border-bottom:1px solid var(--kasumi);position:relative}
+.ph-map svg{display:block;width:100%;height:100%}
+.ph-body{padding:16px;flex:1;display:flex;flex-direction:column}
+.ph-chiban{font-family:var(--mono);font-size:26px;font-weight:500}
+.ph-meta{font-size:12px;color:var(--sumi-3);margin-bottom:14px}
+.ph-photo{
+  border:1.4px dashed var(--kasumi);border-radius:4px;height:72px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--sumi-3);font-size:12.5px;margin-bottom:16px;
+}
+.ph-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.pb{
+  font-family:var(--mincho);font-weight:600;font-size:16px;padding:15px 0;
+  border-radius:4px;border:1.4px solid;background:#fff;cursor:pointer;transition:.12s;
+}
+.pb.ok{color:#3E5A33;border-color:rgba(95,130,80,.55)}
+.pb.ok:hover,.pb.ok.act{background:var(--moss);color:#fff;border-color:var(--moss)}
+.pb.hold{color:#8A6118;border-color:rgba(192,138,46,.55)}
+.pb.hold:hover,.pb.hold.act{background:var(--ki);color:#fff;border-color:var(--ki)}
+.pb.ng{color:#8C2E1E;border-color:rgba(176,64,44,.5)}
+.pb.ng:hover,.pb.ng.act{background:var(--shu);color:#fff;border-color:var(--shu)}
+.ph-log{margin-top:auto;font-size:11.5px;color:var(--sumi-3);font-family:var(--mono);padding-top:14px}
+.feat{list-style:none;margin:0;padding:0;max-width:34em}
+.feat li{padding:18px 0;border-top:1px solid var(--kasumi);font-size:14px;color:var(--sumi-2)}
+.feat li:last-child{border-bottom:1px solid var(--kasumi)}
+.feat b{display:block;font-family:var(--mincho);font-weight:600;font-size:17px;color:var(--sumi);margin-bottom:5px}
+
+/* ---- フッタ ---- */
+.foot{margin-top:70px;background:var(--sumi);color:#C9CFD6;padding:44px 0 52px}
+.foot .logo{color:#fff}
+.foot .logo span{color:#7FA9C9}
+.foot-in{display:grid;grid-template-columns:280px 1fr;gap:40px}
+.foot-note{font-size:12.5px;color:#8D97A3;margin-top:6px}
+.foot-disc{font-size:11.5px;line-height:1.9;color:#8D97A3;margin:0;max-width:44em}
+
+@media(max-width:860px){
+  .two{grid-template-columns:1fr}
+  .doc{border-right:0;border-bottom:1px solid var(--kasumi)}
+  .phone-row{grid-template-columns:1fr;gap:34px;justify-items:center}
+  .foot-in{grid-template-columns:1fr;gap:22px}
+  .hero{padding-top:40px}
+  .sec{padding-top:58px}
+  .hero-meta div{padding-right:18px;margin-right:18px}
+}
+.embedded header.top{position:static;background:var(--washi)}
+.embedded .foot{padding-bottom:34px}
+@media(prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="logo">GRID LAND <span>MGR</span></div>
+    <div class="top-tag">DEMO / 架空データ</div>
+    <div class="top-spacer"></div>
+    <div class="top-note">株式会社XAMAX ＆ In the cloud</div>
+  </div>
+</header>
+
+<main>
+<section class="hero wrap">
+  <div class="eyebrow">用地取得業務のための地理情報システム</div>
+  <h1>土地を見つけたあとの<br><em>判断</em>を、一枚の地図に。</h1>
+  <p class="lede">
+    ハザード、都市計画区域、系統の空き容量、登記、現地の状況。
+    用地の可否を決める材料はばらばらの場所にあります。
+    GRID LAND MGR はそれを同じ地図の上に重ね、現地に立つ前に判断を終わらせるための業務システムです。
+  </p>
+  <div class="hero-meta">
+    <div><span class="mk">重ね合わせるレイヤー</span><span class="mv">12種</span></div>
+    <div><span class="mk">1筆あたりの調査時間</span><span class="mv">3分</span></div>
+    <div><span class="mk">登記簿の転記精度</span><span class="mv">97%</span></div>
+    <div><span class="mk">対応端末</span><span class="mv">PC / iPhone</span></div>
+  </div>
+
+  <div class="browser">
+    <div class="chrome">
+      <span class="cdot" style="background:#E06C5A"></span>
+      <span class="cdot" style="background:#E0B450"></span>
+      <span class="cdot" style="background:#7FB069"></span>
+      <div class="url">grid-land-mgr / map — 緑野市 東雲台（デモ環境・架空データ）</div>
+    </div>
+    <div class="fit" id="fit">
+    <div class="shell" id="shell">
+
+      <div class="appbar">
+        <div class="app-logo">GRID LAND <b>MGR</b></div>
+        <span class="vtag">DEMO</span>
+        <div class="tabs">
+          <button class="tab act" data-t="map">地図</button>
+          <button class="tab" data-t="list">案件一覧</button>
+          <button class="tab" data-t="sum">集計</button>
+        </div>
+        <div class="sp"></div>
+        <div class="who"><span class="av">K</span>管理者</div>
+      </div>
+
+      <div class="toolbar">
+        <div class="srch">地番・所有者・所在で検索</div>
+        <span class="tb-btn">表示条件</span>
+        <span class="tb-btn">判定を再計算</span>
+        <span class="tb-btn">CSV出力</span>
+        <div class="sp"></div>
+        <span class="tb-btn gold">CADで開く</span>
+        <span class="tb-stat"><i></i>デモ環境・架空データ</span>
+      </div>
+
+      <div class="cols">
+        <nav class="nav">
+          <div class="nav-lab">メニュー</div>
+          <div class="nav-i act">地図</div>
+          <div class="nav-i">案件台帳</div>
+          <div class="nav-i">現地調査</div>
+          <div class="nav-i">登記・書類</div>
+          <div class="nav-i">差出管理</div>
+          <div class="nav-i">設定</div>
+          <div class="nav-lab">レイヤー<span class="cnt" id="lyr-cnt">8 / 12</span></div>
+          <div class="lyrs" id="lyrs"></div>
+        </nav>
+
+        <div class="main">
+          <div class="pane" id="pane-map">
+            <svg id="map" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid slice" role="img" aria-label="架空の地籍図に各種レイヤーを重ねた判定マップ">
+              <defs>
+                <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="26"/></filter>
+                <filter id="grain" x="0" y="0" width="100%" height="100%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.62" numOctaves="4" seed="24" result="n"/>
+                  <feColorMatrix in="n" type="saturate" values="0"/>
+                </filter>
+                <filter id="canopy" x="-5%" y="-5%" width="110%" height="110%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="5" seed="9" result="t"/>
+                  <feDisplacementMap in="SourceGraphic" in2="t" scale="26" xChannelSelector="R" yChannelSelector="G"/>
+                </filter>
+                <pattern id="yoto" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="7" stroke="#B98FE0" stroke-width="2.4" opacity=".5"/>
+                </pattern>
+              </defs>
+              <g id="lyr-base"></g>
+              <g id="lyr-air" class="layer"></g>
+              <g id="lyr-road"></g>
+              <g id="lyr-parcel"></g>
+              <g id="lyr-zone" class="layer"></g>
+              <g id="lyr-yoto" class="layer"></g>
+              <g id="lyr-cand" class="layer"></g>
+              <g id="lyr-flood" class="layer"></g>
+              <g id="lyr-naisui" class="layer"></g>
+              <g id="lyr-slide" class="layer"></g>
+              <g id="lyr-grid" class="layer"></g>
+              <g id="lyr-sub" class="layer"></g>
+              <g id="lyr-label"></g>
+            </svg>
+            <div class="scalebar"><span></span>200m</div>
+            <div class="mapctl"><span>＋</span><span class="z">15</span><span>－</span></div>
+            <div class="attrib"><b>Leaflet</b>｜地番: 架空データ（デモ用に生成）／ 背景: デモ用サンプル画像 ／ 本デモは実在の土地・所有者とは無関係です</div>
+          </div>
+
+          <div class="pane" id="pane-list" hidden>
+            <div class="tbar">
+              <span class="fchip act">全件</span><span class="fchip">未調査</span>
+              <span class="fchip">調査済</span><span class="fchip">要確認</span>
+              <div class="sp"></div><span class="tnote" id="tcount"></span>
+            </div>
+            <div class="tscroll"><table class="tbl" id="tbl"><thead><tr>
+              <th>#</th><th>地番</th><th>所在</th><th>地目</th><th class="n">地積㎡</th>
+              <th>所有者</th><th class="n">接道m</th><th>ハザード</th><th class="n">変電所m</th>
+              <th>調査</th><th>判定</th><th>更新</th></tr></thead><tbody></tbody></table></div>
+          </div>
+
+          <div class="pane" id="pane-sum" hidden>
+            <div class="cards" id="cards"></div>
+            <div class="bars"><div class="side-lab">判定の内訳</div><div id="bars"></div></div>
+          </div>
+        </div>
+
+        <aside class="props" id="props"></aside>
+      </div>
+
+      <div class="statusbar">
+        <span id="sb-msg">レイヤー8件を表示中</span>
+        <div class="sp"></div>
+        <span id="sb-xy">X = -32,148.60　Y = -118,442.91</span>
+        <span>1 : 2,500</span>
+        <span id="sb-sel">選択 0 筆</span>
+        <span class="sync">● 同期済</span>
+      </div>
+
+    </div>
+    </div>
+  </div>
+  <p class="cap note-narrow">画面が小さい場合は横向き、またはパソコンでご覧ください。</p>
+  <p class="cap">実際の画面構成のまま、架空のデータを表示しています。地名・地番・氏名・面積・容量・判定はすべて実在しません。候補密度レイヤーは概略の分布のみを示し、抽出の条件および判定基準は公開していません。</p>
+</section>
+
+<section class="wrap sec">
+  <div class="ledger-rule">図面 02 ／ 登記簿の読み取り</div>
+  <h2>PDFを開いて、そのまま台帳に。</h2>
+  <p class="lede">取得した登記事項証明書を読み取り、所有者・地目・地積・住所を案件台帳へ転記します。転記元の記載位置が残るので、あとから根拠を確かめられます。</p>
+  <div class="plate">
+    <div class="plate-head">
+      <div class="plate-title">登記事項証明書 <b>／ 全部事項</b></div>
+      <div class="sp"></div>
+      <button class="btn" id="btn-ocr">転記を実行</button>
+    </div>
+    <div class="two">
+      <div class="doc" id="doc">
+        <div class="doc-ttl">登記事項証明書（土地）</div>
+        <div class="doc-sec">表　題　部</div>
+        <table class="doc-t">
+          <tr><th>所　在</th><td data-f="addr">緑野市東雲台三丁目</td></tr>
+          <tr><th>地　番</th><td data-f="chiban">1042番7</td></tr>
+          <tr><th>地　目</th><td data-f="chimoku">雑種地</td></tr>
+          <tr><th>地　積</th><td data-f="area">583.14 ㎡</td></tr>
+        </table>
+        <div class="doc-sec">権利部（甲区）／ 所有権に関する事項</div>
+        <table class="doc-t">
+          <tr><th>順位1番</th><td>所有権移転　平成29年4月12日</td></tr>
+          <tr><th>原　因</th><td data-f="cause">平成29年4月3日　相続</td></tr>
+          <tr><th>所有者</th><td data-f="owner">緑野市東雲台三丁目5番12号<br>架　空　太　郎</td></tr>
+        </table>
+        <div class="doc-foot">これは登記記録に記録されている事項の全部を証明した書面である。（架空の見本）</div>
+      </div>
+      <div class="extract">
+        <div class="side-lab">案件台帳への転記結果</div>
+        <ul class="rows" id="rows">
+          <li data-f="addr"><span class="k">所在</span><span class="v">—</span></li>
+          <li data-f="chiban"><span class="k">地番</span><span class="v">—</span></li>
+          <li data-f="chimoku"><span class="k">地目</span><span class="v">—</span></li>
+          <li data-f="area"><span class="k">地積</span><span class="v">—</span></li>
+          <li data-f="owner"><span class="k">所有者</span><span class="v">—</span></li>
+          <li data-f="cause"><span class="k">取得原因</span><span class="v">—</span></li>
+          <li data-f="addr2"><span class="k">通知先住所</span><span class="v">—</span></li>
+        </ul>
+        <div class="conf" id="conf"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap sec">
+  <div class="ledger-rule">図面 03 ／ 紙の地番図</div>
+  <h2>撮ってきた公図を、引ける線に。</h2>
+  <p class="lede">現地や役所で撮影した地番図を読み取り、角のR・十字・T字の交点を拾い直してCADで扱える線分に組み直します。手で引き写す作業がなくなります。</p>
+  <div class="plate">
+    <div class="plate-head">
+      <div class="plate-title">地番図 <b>ベクタ化</b></div>
+      <div class="sp"></div>
+      <div class="plate-title">つまみを左右に動かしてください</div>
+    </div>
+    <div class="cadwrap" id="cadwrap">
+      <svg class="cad-svg" viewBox="0 0 800 400" id="cad-rough" aria-label="撮影した地番図"></svg>
+      <div class="cad-clip" id="cadclip">
+        <svg class="cad-svg" viewBox="0 0 800 400" id="cad-clean" aria-label="ベクタ化後のCAD図面"></svg>
+      </div>
+      <div class="cad-handle" id="cadhandle"><span></span></div>
+      <div class="cad-tag l">撮影した図面</div>
+      <div class="cad-tag r">ベクタ化後</div>
+      <input type="range" id="cadrange" min="0" max="100" value="52" aria-label="比較スライダー">
+    </div>
+  </div>
+</section>
+
+<section class="wrap sec">
+  <div class="ledger-rule">図面 04 ／ 現地調査</div>
+  <h2>現地では、片手で終わる。</h2>
+  <p class="lede">地図と台帳をそのまま外へ持ち出せます。筆を選んで可否を押すだけ。写真とメモは案件に紐づいて残り、事務所に戻ってからの入力作業はありません。</p>
+  <div class="phone-row">
+    <div class="phone">
+      <div class="phone-scr">
+        <div class="ph-top"><span>東雲台　現地調査</span><span class="ph-cnt" id="ph-cnt">86 / 248</span></div>
+        <div class="ph-map" id="ph-map"></div>
+        <div class="ph-body">
+          <div class="ph-chiban" id="ph-chiban">1042-7</div>
+          <div class="ph-meta">雑種地 ／ 583㎡ ／ 接道 4.0m</div>
+          <div class="ph-photo"><span>写真を撮る</span></div>
+          <div class="ph-btns">
+            <button class="pb ok" data-v="OK">可</button>
+            <button class="pb hold" data-v="検討">検討</button>
+            <button class="pb ng" data-v="NG">不可</button>
+          </div>
+          <div class="ph-log" id="ph-log">判定を押すと記録されます</div>
+        </div>
+      </div>
+    </div>
+    <ul class="feat">
+      <li><b>圏外でも押せる</b>電波の届かない山地でも記録でき、戻り次第まとめて同期します。</li>
+      <li><b>迷わない</b>調査済みの筆は色が変わるので、どこまで回ったかが地図で分かります。</li>
+      <li><b>あとで揉めない</b>誰がいつどの筆を見たかが残ります。</li>
+    </ul>
+  </div>
+</section>
+
+<section class="wrap sec closing">
+  <div class="ledger-rule">お問い合わせ</div>
+  <h2>自社の用地業務に合わせて使えます。</h2>
+  <p class="lede">導入のご相談、個別の機能デモをご希望の方はご連絡ください。実際の運用画面は秘密保持契約の締結後にご案内しています。</p>
+  <a class="btn big" href="https://www.xamax-itc.com/" target="_blank" rel="noopener">会社情報・お問い合わせ</a>
+</section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-in">
+      <div>
+        <div class="logo">GRID LAND <span>MGR</span></div>
+        <div class="foot-note">株式会社XAMAX ＆ In the cloud</div>
+      </div>
+      <p class="foot-disc">
+        本ページはデモ画面です。表示されている地名・地番・氏名・面積・容量・判定結果はすべて架空のもので、実在の土地および人物とは関係ありません。
+        候補地の抽出方法、判定基準、データ整備の手法は公開していません。
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  if(window.self===window.top)return;
+  document.documentElement.classList.add('embedded');
+  var last=0;
+  function send(){
+    var h=Math.ceil(document.documentElement.scrollHeight);
+    if(Math.abs(h-last)<2)return; last=h;
+    try{parent.postMessage({glm:'height',h:h},'*');}catch(e){}
+  }
+  window.addEventListener('load',send);
+  window.addEventListener('resize',send);
+  document.addEventListener('click',function(){setTimeout(send,700);});
+  if(window.ResizeObserver){new ResizeObserver(send).observe(document.documentElement);}
+  setInterval(send,1500); send();
+})();
+(function(){
+"use strict";
+var RM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function rng(s){return function(){s|=0;s=s+0x6D2B79F5|0;var t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function el(tag,attrs,parent){var n=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(var k in attrs){n.setAttribute(k,attrs[k]);} if(parent)parent.appendChild(n); return n;}
+function inPoly(x,y,p){var c=false;for(var i=0,j=p.length-1;i<p.length;j=i++){
+  if((p[i][1]>y)!=(p[j][1]>y) && x<(p[j][0]-p[i][0])*(y-p[i][1])/(p[j][1]-p[i][1])+p[i][0])c=!c;}return c;}
+function blobPath(pts){var d='M '+((pts[0][0]+pts[pts.length-1][0])/2)+' '+((pts[0][1]+pts[pts.length-1][1])/2);
+  for(var i=0;i<pts.length;i++){var a=pts[i],b=pts[(i+1)%pts.length];
+    d+=' Q '+a[0]+' '+a[1]+' '+((a[0]+b[0])/2)+' '+((a[1]+b[1])/2);} return d+' Z';}
+
+/* ============ 図面01 業務画面 ============ */
+var R=rng(20260724);
+var svg=document.getElementById('map');
+if(svg){
+  var CW=[1,1,1,1,.34,1,1,1,1,1], RH=[1,1,1,.30,1,1,1];
+  var X0=34,X1=866,Y0=26,Y1=574;
+  function acc(arr,a2,b2){var s2=0,q;for(q=0;q<arr.length;q++)s2+=arr[q];var out=[a2],c=0;
+    for(q=0;q<arr.length;q++){c+=arr[q];out.push(a2+(b2-a2)*c/s2);}return out;}
+  var xs=acc(CW,X0,X1), ys=acc(RH,Y0,Y1), P=[],i,j,k;
+  for(i=0;i<xs.length;i++){P[i]=[];for(j=0;j<ys.length;j++){
+    var jx=(i===0||i===xs.length-1)?0:(R()-.5)*13, jy=(j===0||j===ys.length-1)?0:(R()-.5)*11;
+    P[i][j]=[+(xs[i]+jx).toFixed(1),+(ys[j]+jy).toFixed(1)];}}
+
+  function mkblob(cx,cy,r,fy){var o=[];for(var q=0;q<11;q++){var t=q/11*Math.PI*2,rr=r*(.72+.52*R());
+    o.push([cx+Math.cos(t)*rr,cy+Math.sin(t)*rr*fy]);}return o;}
+  var flood=mkblob(232,486,138,.72), naisui=mkblob(556,520,72,.8), slide=mkblob(700,116,116,.85);
+  var SUBX=150,SUBY=110;
+
+  var L={base:'lyr-base',air:'lyr-air',road:'lyr-road',parcel:'lyr-parcel',zone:'lyr-zone',yoto:'lyr-yoto',
+    cand:'lyr-cand',flood:'lyr-flood',naisui:'lyr-naisui',slide:'lyr-slide',grid:'lyr-grid',
+    sub:'lyr-sub',label:'lyr-label'};
+  for(var kk in L)L[kk]=document.getElementById(L[kk]);
+
+  /* --- 背景地図（架空・自動生成） --- */
+  var S=rng(90210);
+  function patch(cx,cy,r,fy,jit){var o=[],q;for(q=0;q<13;q++){var t=q/13*Math.PI*2,rr=r*(1-jit+jit*2*S());
+    o.push([cx+Math.cos(t)*rr,cy+Math.sin(t)*rr*fy]);}return blobPath(o);}
+
+  /* 地図ベース（航空写真OFF時に見える簡易地図） */
+  el('rect',{x:0,y:0,width:900,height:600,fill:'#1F2B33'},L.base);
+  for(var b=0;b<26;b++){
+    el('path',{d:patch(S()*900,S()*600,34+S()*76,.72+S()*.5,.34),fill:'#25333C'},L.base);}
+  el('path',{d:'M -20 214 C 150 250 250 340 330 430 S 470 590 520 640',fill:'none',
+    stroke:'#2C4653','stroke-width':13,'stroke-linecap':'round'},L.base);
+  for(var b2=0;b2<9;b2++){
+    el('line',{x1:S()*900,y1:S()*600,x2:S()*900,y2:S()*600,stroke:'#39505C','stroke-width':1.4},L.base);}
+
+  /* 航空写真レイヤー（デモ用に生成した架空の画像） */
+  el('rect',{x:0,y:0,width:900,height:600,fill:'#33422C'},L.air);
+  var GF=el('g',{filter:'url(#canopy)'},L.air);
+  var FOR=['#22301C','#293A21','#1D2A18','#2F4226'];
+  for(var f=0;f<34;f++){
+    el('path',{d:patch(S()*920-10,S()*620-10,46+S()*118,.6+S()*.62,.4),
+      fill:FOR[Math.floor(S()*4)],opacity:(.55+S()*.45).toFixed(2)},GF);}
+  var FLD=['#4E4C33','#5A5639','#6A6244','#454630','#7A6E4E'];
+  for(var f2=0;f2<58;f2++){
+    var fx=90+S()*720, fy2=90+S()*430, fw=14+S()*46, fh=9+S()*30, ro=(S()*40-20).toFixed(1);
+    el('rect',{x:fx,y:fy2,width:fw,height:fh,fill:FLD[Math.floor(S()*5)],
+      opacity:(.5+S()*.42).toFixed(2),transform:'rotate('+ro+' '+(fx+fw/2)+' '+(fy2+fh/2)+')'},L.air);}
+  var URB=el('g',{},L.air);
+  for(var u=0;u<190;u++){
+    var ux=40+S()*300, uy=330+S()*250;
+    el('rect',{x:ux,y:uy,width:3+S()*8,height:3+S()*7,
+      fill:['#6E736F','#7C7F77','#5E635F','#8A8A80'][Math.floor(S()*4)],
+      opacity:(.55+S()*.4).toFixed(2)},URB);}
+  el('path',{d:'M -20 214 C 150 250 250 340 330 430 S 470 590 520 640',fill:'none',
+    stroke:'#33505C','stroke-width':15,'stroke-linecap':'round',opacity:'.9'},L.air);
+  el('path',{d:'M -20 214 C 150 250 250 340 330 430 S 470 590 520 640',fill:'none',
+    stroke:'#48707E','stroke-width':6,'stroke-linecap':'round',opacity:'.55'},L.air);
+  for(var rd=0;rd<7;rd++){
+    el('path',{d:'M '+(S()*900)+' '+(S()*600)+' Q '+(S()*900)+' '+(S()*600)+' '+(S()*900)+' '+(S()*600),
+      fill:'none',stroke:'#8E9184','stroke-width':(1+S()*1.6).toFixed(1),opacity:'.5'},L.air);}
+  el('rect',{x:0,y:0,width:900,height:600,filter:'url(#grain)',opacity:'.16',
+    'mix-blend-mode':'overlay','pointer-events':'none'},L.air);
+  [[196,196,78],[534,428,92],[762,296,66]].forEach(function(c){
+    el('circle',{cx:c[0],cy:c[1],r:c[2],'class':'cand-blob'},L.cand);});
+  el('path',{d:blobPath(flood),'class':'hz-flood'},L.flood);
+  el('path',{d:blobPath(naisui),'class':'hz-naisui'},L.naisui);
+  el('path',{d:blobPath(slide),'class':'hz-slide'},L.slide);
+  [70,140,214,296,380].forEach(function(r){el('circle',{cx:SUBX,cy:SUBY,r:r,'class':'grid-ring'},L.grid);});
+  el('rect',{x:SUBX-12,y:SUBY-12,width:24,height:24,fill:'#101922',stroke:'#79B4E4','stroke-width':1.6},L.sub);
+  el('path',{d:'M '+(SUBX-4)+' '+(SUBY-7)+' L '+(SUBX-1)+' '+SUBY+' L '+(SUBX-5)+' '+SUBY+' L '+(SUBX+5)+' '+(SUBY+7),
+    fill:'none',stroke:'#79B4E4','stroke-width':2,'stroke-linejoin':'round'},L.sub);
+  el('text',{x:SUBX+18,y:SUBY+4,'class':'chiban',fill:'#AFD4F2'},L.sub).textContent='東雲変電所 66kV';
+
+  var ZC=['zone-a','zone-b','zone-c'], ZN=['第一種区域','第二種区域','区域外'];
+  var YN=['準工業地域','工業専用地域','指定なし'];
+  var SEI=['仮野','見本','例田','標本','試作','架空'], MEI=['太郎','花子','一郎','幸子','三郎','美代'];
+  var TAN=['見本 花子','仮野 一郎','例田 三郎'];
+  var parcels=[], n=0;
+  for(var ci=0;ci<CW.length;ci++)for(var rj=0;rj<RH.length;rj++){
+    var pts=[P[ci][rj],P[ci+1][rj],P[ci+1][rj+1],P[ci][rj+1]];
+    var ds=pts.map(function(q){return q.join(',');}).join(' ');
+    var cx=(pts[0][0]+pts[2][0])/2, cy=(pts[0][1]+pts[2][1])/2;
+    if(ci===4||rj===3){el('polygon',{points:ds,'class':'road'},L.road);continue;}
+    var fl=inPoly(cx,cy,flood), na=inPoly(cx,cy,naisui), sl=inPoly(cx,cy,slide);
+    var zi=Math.floor(R()*3), yi=Math.floor(R()*3);
+    var o={i:n++,cx:cx,cy:cy,fl:fl,na:na,sl:sl,zi:zi,yi:yi,
+      dist:Math.round(Math.hypot(cx-SUBX,cy-SUBY)*1.55/10)*10,
+      area:+(320+R()*1180).toFixed(2),
+      road:[3.0,4.0,4.5,5.5,6.0][Math.floor(R()*5)],
+      width:[2.7,3.6,4.2,5.0,6.5][Math.floor(R()*5)],
+      chimoku:['雑種地','原野','宅地','山林','畑'][Math.floor(R()*5)],
+      alt:Math.round(88+R()*74), slope:+(R()*11).toFixed(1),
+      owner:SEI[Math.floor(R()*6)]+' '+MEI[Math.floor(R()*6)],
+      tan:TAN[Math.floor(R()*3)],
+      cause:['相続','売買','贈与'][Math.floor(R()*3)],
+      upd:'2026-0'+(4+Math.floor(R()*3))+'-'+(10+Math.floor(R()*19)),
+      chiban:(1020+ci*3)+'-'+(rj+1),
+      aza:['三丁目','四丁目','五丁目'][Math.floor(R()*3)]};
+    o.surveyed=R()<.42;
+    o.v=(fl||sl)?'ng':(R()<.30?'ok':(R()<.55?'hold':'ng'));
+    el('polygon',{points:ds,'class':ZC[zi]},L.zone);
+    if(yi<2)el('polygon',{points:ds,fill:'url(#yoto)'},L.yoto);
+    o.node=el('polygon',{points:ds,'class':'parcel',tabindex:'0',role:'button','aria-label':'地番 '+o.chiban},L.parcel);
+    el('text',{x:cx,y:cy+3,'class':'chiban','text-anchor':'middle'},L.label).textContent=o.chiban;
+    parcels.push(o);
+  }
+
+  /* --- レイヤーパネル --- */
+  var sb=document.getElementById('sb-msg');
+  function msg(t){sb.textContent=t;}
+  var LAYERS=[
+    ['lines','地番界','#9DB3C6',1],['air','航空写真','#4E5C3C',1],
+    ['zone','都市計画区域','#7EB068',1],['yoto','用途地域','#B98FE0',0],
+    ['flood','洪水浸水想定','#4E92C8',1],['naisui','内水浸水想定','#56B2C4',1],
+    ['slide','土砂災害警戒','#E2A43C',1],['takashio','高潮浸水想定','#4E7F8F',0],
+    ['tsunami','津波浸水想定','#3E6C93',0],['grid','系統空容量','#79B4E4',1],
+    ['sub','変電所','#79B4E4',1],['cand','候補密度（概略）','#7EC878',0]];
+  var box=document.getElementById('lyrs'), cnt=document.getElementById('lyr-cnt');
+  var pane=document.getElementById('pane-map');
+  LAYERS.forEach(function(t){
+    var lab=document.createElement('label'); lab.className='lyr';
+    lab.innerHTML='<input type="checkbox"'+(t[3]?' checked':'')+'><span class="swatch" style="background:'+t[2]+'"></span><span class="nm">'+t[1]+'</span>';
+    var cb=lab.querySelector('input');
+    cb.addEventListener('change',function(){
+      if(t[0]==='takashio'||t[0]==='tsunami'){
+        if(cb.checked)msg('この区域に'+t[1]+'区域のデータはありません');
+        else msg(t[1]+'を非表示にしました');
+      }else if(t[0]==='lines'){
+        pane.classList.toggle('noline',!cb.checked); msg('地番界を'+(cb.checked?'表示':'非表示')+'しました');
+      }else{
+        L[t[0]].classList.toggle('on',cb.checked); msg(t[1]+'を'+(cb.checked?'表示':'非表示')+'しました');
+      }
+      var c=0; box.querySelectorAll('input').forEach(function(x){if(x.checked)c++;});
+      cnt.textContent=c+' / 12';
+    });
+    box.appendChild(lab);
+  });
+
+  /* --- 属性パネル --- */
+  var props=document.getElementById('props'), sel=document.getElementById('sb-sel'), cur=null;
+  var VD={ok:['適　合','ok'],hold:['要確認','hold'],ng:['不適合','ng']};
+  function row(k,v,c){return '<li><span class="k">'+k+'</span><span class="v '+(c||'')+'">'+v+'</span></li>';}
+  function pick(o){
+    if(cur)cur.node.classList.remove('sel');
+    cur=o;o.node.classList.add('sel');
+    var hz=[o.fl?['該当','r']:['非該当','g'],o.na?['該当','r']:['非該当','g'],o.sl?['該当','r']:['非該当','g']];
+    props.innerHTML=
+      '<div class="props-h"><div class="verdict-chiban">'+o.chiban+'</div>'+
+      '<div class="verdict-sub">緑野市東雲台'+o.aza+'　／　案件ID GLM-'+(4100+o.i)+'</div></div>'+
+      '<div class="badge '+VD[o.v][1]+'"><span class="dot"></span>'+VD[o.v][0]+'</div>'+
+      '<div class="grp"><span class="side-lab">土地の表示</span></div><ul class="chk">'+
+      row('地目',o.chimoku)+row('地積',o.area.toFixed(2)+' ㎡')+row('公簿/実測','公簿')+
+      row('標高',o.alt+' m')+row('平均傾斜',o.slope+' °')+'</ul>'+
+      '<div class="grp"><span class="side-lab">所有・接道</span></div><ul class="chk">'+
+      row('所有者',o.owner)+row('取得原因',o.cause)+
+      row('前面道路',o.road.toFixed(1)+' m',o.road>=4?'g':'y')+row('幅員',o.width.toFixed(1)+' m',o.width>=4?'g':'y')+'</ul>'+
+      '<div class="grp"><span class="side-lab">規制</span></div><ul class="chk">'+
+      row('都市計画',ZN[o.zi])+row('用途地域',YN[o.yi])+
+      row('洪水',hz[0][0],hz[0][1])+row('内水',hz[1][0],hz[1][1])+row('土砂',hz[2][0],hz[2][1])+
+      row('高潮','データなし','')+row('津波','データなし','')+'</ul>'+
+      '<div class="grp"><span class="side-lab">系統・進捗</span></div><ul class="chk">'+
+      row('変電所','東雲変電所')+row('直線距離',o.dist.toLocaleString()+' m',o.dist<=340?'g':(o.dist<=620?'y':'r'))+
+      row('現地調査',o.surveyed?'実施済':'未実施',o.surveyed?'g':'')+
+      row('担当',o.tan)+row('最終更新',o.upd)+'</ul>';
+    sel.textContent='選択 1 筆';
+    msg('地番 '+o.chiban+' を選択しました');
+  }
+  parcels.forEach(function(o){
+    o.node.addEventListener('click',function(){pick(o);});
+    o.node.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(o);}});
+  });
+  props.innerHTML='<div class="props-empty">地図上の筆をクリックすると、ここに属性と判定が表示されます。</div>';
+
+  /* --- 一覧 --- */
+  var tb=document.querySelector('#tbl tbody'), html='';
+  parcels.forEach(function(o,q){
+    var hz=o.fl?'洪水':(o.sl?'土砂':(o.na?'内水':'—'));
+    html+='<tr><td class="mut">'+(q+1)+'</td><td class="mono">'+o.chiban+'</td>'+
+      '<td>東雲台'+o.aza+'</td><td>'+o.chimoku+'</td><td class="n">'+o.area.toFixed(2)+'</td>'+
+      '<td>'+o.owner+'</td><td class="n">'+o.road.toFixed(1)+'</td>'+
+      '<td'+(hz==='—'?' class="mut"':'')+'>'+hz+'</td><td class="n">'+o.dist.toLocaleString()+'</td>'+
+      '<td'+(o.surveyed?'':' class="mut"')+'>'+(o.surveyed?'済':'未')+'</td>'+
+      '<td><span class="pill '+VD[o.v][1]+'">'+VD[o.v][0].replace('　','')+'</span></td>'+
+      '<td class="mono mut">'+o.upd+'</td></tr>';
+  });
+  tb.innerHTML=html;
+  document.getElementById('tcount').textContent=parcels.length+' 件を表示（全 248 件中）';
+
+  /* --- 集計 --- */
+  var cn={ok:0,hold:0,ng:0},sum=0;
+  parcels.forEach(function(o){cn[o.v]++;sum+=o.area;});
+  document.getElementById('cards').innerHTML=
+    [['表示中の筆',parcels.length,'緑野市東雲台'],['調査済',parcels.filter(function(o){return o.surveyed;}).length,'現地調査の完了数'],
+     ['平均地積',Math.round(sum/parcels.length).toLocaleString(),'㎡'],['変電所まで平均',Math.round(parcels.reduce(function(a2,o){return a2+o.dist;},0)/parcels.length).toLocaleString(),'m']]
+    .map(function(c){return '<div class="card"><div class="cl">'+c[0]+'</div><div class="cv">'+c[1]+'</div><div class="cs">'+c[2]+'</div></div>';}).join('');
+  var BC={ok:'#5F8250',hold:'#C08A2E',ng:'#B0402C'};
+  document.getElementById('bars').innerHTML=['ok','hold','ng'].map(function(v){
+    return '<div class="bar"><span class="bl">'+VD[v][0].replace('　','')+'</span><span class="bt"><span class="bf" style="width:'+
+      (cn[v]/parcels.length*100).toFixed(1)+'%;background:'+BC[v]+'"></span></span><span class="bn">'+cn[v]+' 筆</span></div>';}).join('');
+
+  /* --- タブ --- */
+  var PN={map:'pane-map',list:'pane-list',sum:'pane-sum'};
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click',function(){
+      document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('act');});
+      t.classList.add('act');
+      for(var q in PN)document.getElementById(PN[q]).hidden=(q!==t.dataset.t);
+      msg({map:'地図を表示中',list:'案件一覧を表示中',sum:'集計を表示中'}[t.dataset.t]);
+    });
+  });
+
+  /* --- ステータスバー座標 --- */
+  var xy=document.getElementById('sb-xy');
+  pane.addEventListener('mousemove',function(e){
+    var r=pane.getBoundingClientRect();
+    xy.textContent='X = '+(-32000-(e.clientY-r.top)*1.55).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',')+
+      '　Y = '+(-118600+(e.clientX-r.left)*1.55).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  });
+
+  /* --- 初期表示 --- */
+  L.air.classList.add('on');
+  ['zone','flood','naisui','slide','grid','sub'].forEach(function(q,idx){
+    if(RM)L[q].classList.add('on');
+    else setTimeout(function(){L[q].classList.add('on');},180+idx*170);
+  });
+  if(RM)pick(parcels[22]); else setTimeout(function(){pick(parcels[22]);},1400);
+
+  /* --- 縮小表示 --- */
+  var fitEl=document.getElementById('fit'), shell=document.getElementById('shell');
+  function fit(){var w=fitEl.clientWidth,sc=Math.min(1,w/1060);
+    shell.style.transform='scale('+sc+')'; fitEl.style.height=(626*sc)+'px';}
+  fit(); window.addEventListener('resize',fit); setTimeout(fit,600);
+}
+
+/* ============ 図面02 登記簿の読み取り ============ */
+(function(){
+  var btn=document.getElementById('btn-ocr'); if(!btn)return;
+  var order=['addr','chiban','chimoku','area','owner','cause','addr2'];
+  var vals={addr:'緑野市東雲台三丁目',chiban:'1042-7',chimoku:'雑種地',area:'583.14 ㎡',
+    owner:'架空 太郎',cause:'相続（H29.4.3）',addr2:'緑野市東雲台三丁目5-12'};
+  var src={addr2:'owner'};
+  btn.addEventListener('click',function(){
+    btn.disabled=true;btn.textContent='読み取り中';
+    document.getElementById('conf').textContent='';
+    document.querySelectorAll('#rows li').forEach(function(li){li.classList.remove('done');
+      li.querySelector('.v').textContent='—';});
+    order.forEach(function(f,i){
+      setTimeout(function(){
+        var td=document.querySelector('.doc-t td[data-f="'+(src[f]||f)+'"]');
+        document.querySelectorAll('.doc-t td.lit').forEach(function(x){x.classList.remove('lit');});
+        if(td)td.classList.add('lit');
+        var li=document.querySelector('#rows li[data-f="'+f+'"]');
+        li.querySelector('.v').textContent=vals[f];li.classList.add('done');
+        if(i===order.length-1)setTimeout(function(){
+          document.querySelectorAll('.doc-t td.lit').forEach(function(x){x.classList.remove('lit');});
+          document.getElementById('conf').innerHTML='7項目を転記しました。確信度 <b>97%</b>。<br>数字と氏名は原本の該当箇所を並べて確認できます。';
+          btn.disabled=false;btn.textContent='もう一度実行';},520);
+      }, RM?0:(i+1)*430);
+    });
+  });
+})();
+
+/* ============ 図面03 地番図のベクタ化 ============ */
+(function(){
+  var rough=document.getElementById('cad-rough'), clean=document.getElementById('cad-clean');
+  if(!rough)return;
+  var R2=rng(77021), G=[];
+  var xs=[70,240,404,566,730], ys=[62,178,300];
+  for(var i=0;i<xs.length;i++){G[i]=[];for(var j=0;j<ys.length;j++){
+    G[i][j]=[xs[i]+(R2()-.5)*16, ys[j]+(R2()-.5)*14];}}
+  function wob(a,b,amp){var d='M '+a[0].toFixed(1)+' '+a[1].toFixed(1),s=5;
+    for(var t=1;t<=s;t++){var u=t/s;
+      d+=' L '+(a[0]+(b[0]-a[0])*u+(R2()-.5)*amp).toFixed(1)+' '+(a[1]+(b[1]-a[1])*u+(R2()-.5)*amp).toFixed(1);}
+    return d;}
+  var edges=[];
+  for(i=0;i<xs.length;i++)for(j=0;j<ys.length-1;j++)edges.push([G[i][j],G[i][j+1]]);
+  for(i=0;i<xs.length-1;i++)for(j=0;j<ys.length;j++)edges.push([G[i][j],G[i+1][j]]);
+  edges.forEach(function(e){
+    el('path',{d:wob(e[0],e[1],3.4),'class':'rough'},rough);
+    el('path',{d:wob(e[0],e[1],5.2),'class':'rough2'},rough);
+  });
+  for(i=0;i<xs.length-1;i++)for(j=0;j<ys.length-1;j++){
+    var cx=(G[i][j][0]+G[i+1][j+1][0])/2, cy=(G[i][j][1]+G[i+1][j+1][1])/2;
+    var t=el('text',{x:cx,y:cy+4,'class':'hand','text-anchor':'middle',
+      transform:'rotate('+((R2()-.5)*6).toFixed(1)+' '+cx+' '+cy+')'},rough);
+    t.textContent=(1020+i*3)+'-'+(j+1);
+  }
+  el('text',{x:398,y:372,'class':'hand','text-anchor':'middle'},rough).textContent='— 撮影：東雲台 公図（架空）—';
+
+  function rounded(p,r){var d='',i2;
+    for(i2=0;i2<p.length;i2++){
+      var prev=p[(i2-1+p.length)%p.length],cu=p[i2],nx=p[(i2+1)%p.length];
+      var v1=[cu[0]-prev[0],cu[1]-prev[1]],v2=[nx[0]-cu[0],nx[1]-cu[1]];
+      var l1=Math.hypot(v1[0],v1[1])||1,l2=Math.hypot(v2[0],v2[1])||1;
+      var rr=Math.min(r,l1/2.4,l2/2.4);
+      var a=[cu[0]-v1[0]/l1*rr,cu[1]-v1[1]/l1*rr], b=[cu[0]+v2[0]/l2*rr,cu[1]+v2[1]/l2*rr];
+      d+=(i2===0?'M '+a[0].toFixed(1)+' '+a[1].toFixed(1):' L '+a[0].toFixed(1)+' '+a[1].toFixed(1));
+      d+=' Q '+cu[0].toFixed(1)+' '+cu[1].toFixed(1)+' '+b[0].toFixed(1)+' '+b[1].toFixed(1);
+    } return d+' Z';}
+  for(i=0;i<xs.length-1;i++)for(j=0;j<ys.length-1;j++){
+    var poly=[G[i][j],G[i+1][j],G[i+1][j+1],G[i][j+1]];
+    el('path',{d:rounded(poly,9),'class':'clean'},clean);
+    var cx2=(poly[0][0]+poly[2][0])/2, cy2=(poly[0][1]+poly[2][1])/2;
+    el('text',{x:cx2,y:cy2+3,'class':'cadnum','text-anchor':'middle'},clean).textContent=(1020+i*3)+'-'+(j+1);
+  }
+  for(i=0;i<xs.length;i++)for(j=0;j<ys.length;j++)
+    el('circle',{cx:G[i][j][0],cy:G[i][j][1],r:3.4,'class':'vtx'},clean);
+  el('text',{x:398,y:372,'class':'cadnum','text-anchor':'middle'},clean)
+    .textContent='LWPOLYLINE 12 / ARC 48 / 交点スナップ 15';
+
+  var range=document.getElementById('cadrange'),clip=document.getElementById('cadclip'),hd=document.getElementById('cadhandle');
+  function set(v){clip.style.clipPath='inset(0 0 0 '+v+'%)';hd.style.left=v+'%';}
+  range.addEventListener('input',function(){set(range.value);});
+  set(range.value);
+})();
+
+/* ============ 図面04 現地調査 ============ */
+(function(){
+  var wrapEl=document.getElementById('ph-map'); if(!wrapEl)return;
+  var R3=rng(4410), s=el('svg',{viewBox:'0 0 300 186'},wrapEl), cells=[];
+  for(var i=0;i<6;i++)for(var j=0;j<4;j++){
+    var x=6+i*49+(R3()-.5)*5, y=6+j*45+(R3()-.5)*5;
+    var c=el('rect',{x:x.toFixed(1),y:y.toFixed(1),width:44,height:40,rx:1.5,
+      fill:'#fff',stroke:'#6B7684','stroke-width':.7},s);
+    cells.push(c);
+  }
+  var COL={'OK':'rgba(95,130,80,.55)','検討':'rgba(192,138,46,.5)','NG':'rgba(176,64,44,.4)'};
+  cells.forEach(function(c){var r=R3();if(r<.34)c.setAttribute('fill',COL.OK);
+    else if(r<.44)c.setAttribute('fill',COL['検討']);else if(r<.62)c.setAttribute('fill',COL.NG);});
+  var cursor=el('rect',{x:0,y:0,width:44,height:40,rx:1.5,fill:'#FBF3DC',
+    stroke:'#171C22','stroke-width':1.8},s);
+  var idx=8, list=['1042-7','1045-2','1045-3','1048-1','1051-6','1054-2'], li=0, done=86;
+  var META=['雑種地 ／ 583㎡ ／ 接道 4.0m','原野 ／ 921㎡ ／ 接道 5.5m','原野 ／ 448㎡ ／ 接道 3.0m',
+    '山林 ／ 1,204㎡ ／ 接道 6.0m','畑 ／ 662㎡ ／ 接道 4.5m','雑種地 ／ 375㎡ ／ 接道 4.0m'];
+  function place(){var c=cells[idx];cursor.setAttribute('x',c.getAttribute('x'));cursor.setAttribute('y',c.getAttribute('y'));}
+  place();
+  document.querySelectorAll('.pb').forEach(function(b){
+    b.addEventListener('click',function(){
+      var v=b.dataset.v;
+      document.querySelectorAll('.pb').forEach(function(x){x.classList.remove('act');});
+      b.classList.add('act');
+      cells[idx].setAttribute('fill',COL[v]);
+      done++;
+      document.getElementById('ph-log').textContent=list[li]+' → '+v+' ／ 保存しました';
+      document.getElementById('ph-cnt').textContent=done+' / 248';
+      setTimeout(function(){
+        b.classList.remove('act');
+        li=(li+1)%list.length; idx=(idx+5)%cells.length; place();
+        document.getElementById('ph-chiban').textContent=list[li];
+        document.querySelector('.ph-meta').textContent=META[li];
+      }, RM?0:620);
+    });
+  });
+})();
+})();
+</script>
+
+</body>
+</html>
