@@ -627,24 +627,17 @@ h1 em::after{
 </section>
 
 <section class="wrap sec">
-  <div class="ledger-rule">図面 03 ／ 紙の地番図</div>
-  <h2>撮ってきた公図を、引ける線に。</h2>
-  <p class="lede">現地や役所で撮影した地番図を読み取り、角のR・十字・T字の交点を拾い直してCADで扱える線分に組み直します。手で引き写す作業がなくなります。</p>
+  <div class="ledger-rule">図面 03 ／ 敷地境界</div>
+  <h2>地図の上に、原寸の線を。</h2>
+  <p class="lede">敷地境界などの線を、地図上に実寸で描いて残せます。公図画像からの自動読み取り・CAD変換は開発中です。</p>
   <div class="plate">
     <div class="plate-head">
-      <div class="plate-title">地番図 <b>ベクタ化</b></div>
+      <div class="plate-title">敷地境界 <b>手描き・実寸</b></div>
       <div class="sp"></div>
-      <div class="plate-title">つまみを左右に動かしてください</div>
+      <div class="plate-title" id="line-area">面積を計算中…</div>
     </div>
-    <div class="cadwrap" id="cadwrap">
-      <svg class="cad-svg" viewBox="0 0 800 400" id="cad-rough" aria-label="撮影した地番図"></svg>
-      <div class="cad-clip" id="cadclip">
-        <svg class="cad-svg" viewBox="0 0 800 400" id="cad-clean" aria-label="ベクタ化後のCAD図面"></svg>
-      </div>
-      <div class="cad-handle" id="cadhandle"><span></span></div>
-      <div class="cad-tag l">撮影した図面</div>
-      <div class="cad-tag r">ベクタ化後</div>
-      <input type="range" id="cadrange" min="0" max="100" value="52" aria-label="比較スライダー">
+    <div class="cadwrap" id="linewrap">
+      <svg class="cad-svg" viewBox="0 0 800 400" id="line-svg" aria-label="地図上に描いた敷地境界(実寸・架空データ)"></svg>
     </div>
   </div>
 </section>
@@ -994,58 +987,28 @@ if(svg){
   });
 })();
 
-/* ============ 図面03 地番図のベクタ化 ============ */
+/* ============ 図面03 敷地境界(手描き・原寸) ============ */
 (function(){
-  var rough=document.getElementById('cad-rough'), clean=document.getElementById('cad-clean');
-  if(!rough)return;
-  var R2=rng(77021), G=[];
-  var xs=[70,240,404,566,730], ys=[62,178,300];
-  for(var i=0;i<xs.length;i++){G[i]=[];for(var j=0;j<ys.length;j++){
-    G[i][j]=[xs[i]+(R2()-.5)*16, ys[j]+(R2()-.5)*14];}}
-  function wob(a,b,amp){var d='M '+a[0].toFixed(1)+' '+a[1].toFixed(1),s=5;
-    for(var t=1;t<=s;t++){var u=t/s;
-      d+=' L '+(a[0]+(b[0]-a[0])*u+(R2()-.5)*amp).toFixed(1)+' '+(a[1]+(b[1]-a[1])*u+(R2()-.5)*amp).toFixed(1);}
-    return d;}
-  var edges=[];
-  for(i=0;i<xs.length;i++)for(j=0;j<ys.length-1;j++)edges.push([G[i][j],G[i][j+1]]);
-  for(i=0;i<xs.length-1;i++)for(j=0;j<ys.length;j++)edges.push([G[i][j],G[i+1][j]]);
-  edges.forEach(function(e){
-    el('path',{d:wob(e[0],e[1],3.4),'class':'rough'},rough);
-    el('path',{d:wob(e[0],e[1],5.2),'class':'rough2'},rough);
-  });
-  for(i=0;i<xs.length-1;i++)for(j=0;j<ys.length-1;j++){
-    var cx=(G[i][j][0]+G[i+1][j+1][0])/2, cy=(G[i][j][1]+G[i+1][j+1][1])/2;
-    var t=el('text',{x:cx,y:cy+4,'class':'hand','text-anchor':'middle',
-      transform:'rotate('+((R2()-.5)*6).toFixed(1)+' '+cx+' '+cy+')'},rough);
-    t.textContent=(1020+i*3)+'-'+(j+1);
+  var svg=document.getElementById('line-svg'); if(!svg)return;
+  for(var gx=0; gx<=800; gx+=40) el('line',{x1:gx,y1:0,x2:gx,y2:400,stroke:'#E7ECE3','stroke-width':1},svg);
+  for(var gy=0; gy<=400; gy+=40) el('line',{x1:0,y1:gy,x2:800,y2:gy,stroke:'#E7ECE3','stroke-width':1},svg);
+  var pts=[[220,110],[560,90],[590,260],[300,300],[190,220]];
+  var d='M '+pts.map(function(p){return p[0]+' '+p[1];}).join(' L ')+' Z';
+  el('path',{d:d,'class':'clean'},svg);
+  pts.forEach(function(p){ el('circle',{cx:p[0],cy:p[1],r:3.6,'class':'vtx'},svg); });
+  var SCALE=0.25; // 1px=0.25m相当(架空)
+  for(var i=0;i<pts.length;i++){
+    var a=pts[i], b=pts[(i+1)%pts.length];
+    var mx=(a[0]+b[0])/2, my=(a[1]+b[1])/2;
+    var len=(Math.hypot(b[0]-a[0],b[1]-a[1])*SCALE).toFixed(1);
+    el('text',{x:mx,y:my-6,'class':'cadnum','text-anchor':'middle'},svg).textContent=len+'m';
   }
-  el('text',{x:398,y:372,'class':'hand','text-anchor':'middle'},rough).textContent='— 撮影：東雲台 公図（架空）—';
-
-  function rounded(p,r){var d='',i2;
-    for(i2=0;i2<p.length;i2++){
-      var prev=p[(i2-1+p.length)%p.length],cu=p[i2],nx=p[(i2+1)%p.length];
-      var v1=[cu[0]-prev[0],cu[1]-prev[1]],v2=[nx[0]-cu[0],nx[1]-cu[1]];
-      var l1=Math.hypot(v1[0],v1[1])||1,l2=Math.hypot(v2[0],v2[1])||1;
-      var rr=Math.min(r,l1/2.4,l2/2.4);
-      var a=[cu[0]-v1[0]/l1*rr,cu[1]-v1[1]/l1*rr], b=[cu[0]+v2[0]/l2*rr,cu[1]+v2[1]/l2*rr];
-      d+=(i2===0?'M '+a[0].toFixed(1)+' '+a[1].toFixed(1):' L '+a[0].toFixed(1)+' '+a[1].toFixed(1));
-      d+=' Q '+cu[0].toFixed(1)+' '+cu[1].toFixed(1)+' '+b[0].toFixed(1)+' '+b[1].toFixed(1);
-    } return d+' Z';}
-  for(i=0;i<xs.length-1;i++)for(j=0;j<ys.length-1;j++){
-    var poly=[G[i][j],G[i+1][j],G[i+1][j+1],G[i][j+1]];
-    el('path',{d:rounded(poly,9),'class':'clean'},clean);
-    var cx2=(poly[0][0]+poly[2][0])/2, cy2=(poly[0][1]+poly[2][1])/2;
-    el('text',{x:cx2,y:cy2+3,'class':'cadnum','text-anchor':'middle'},clean).textContent=(1020+i*3)+'-'+(j+1);
-  }
-  for(i=0;i<xs.length;i++)for(j=0;j<ys.length;j++)
-    el('circle',{cx:G[i][j][0],cy:G[i][j][1],r:3.4,'class':'vtx'},clean);
-  el('text',{x:398,y:372,'class':'cadnum','text-anchor':'middle'},clean)
-    .textContent='LWPOLYLINE 12 / ARC 48 / 交点スナップ 15';
-
-  var range=document.getElementById('cadrange'),clip=document.getElementById('cadclip'),hd=document.getElementById('cadhandle');
-  function set(v){clip.style.clipPath='inset(0 0 0 '+v+'%)';hd.style.left=v+'%';}
-  range.addEventListener('input',function(){set(range.value);});
-  set(range.value);
+  var area=0;
+  for(var j=0;j<pts.length;j++){ var p1=pts[j], p2=pts[(j+1)%pts.length]; area += p1[0]*p2[1]-p2[0]*p1[1]; }
+  area = Math.abs(area/2) * SCALE * SCALE;
+  el('text',{x:398,y:372,'class':'hand','text-anchor':'middle'},svg).textContent='実測 '+area.toFixed(1)+' ㎡（架空データ）';
+  var areaEl=document.getElementById('line-area');
+  if(areaEl) areaEl.innerHTML='面積 <b>'+area.toFixed(1)+' ㎡</b>';
 })();
 
 /* ============ 図面04 現地調査 ============ */
